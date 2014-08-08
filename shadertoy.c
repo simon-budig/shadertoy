@@ -4,6 +4,10 @@
 #include <GL/glew.h>
 #include <GL/glut.h>
 
+static double mouse_x0 = 0;
+static double mouse_y0 = 0;
+static double mouse_x = 0;
+static double mouse_y = 0;
 
 GLint
 compile_shader (const GLenum  shader_type,
@@ -98,6 +102,33 @@ init (char *fragmentshader)
 
 
 void
+mouse_press_handler (int button, int state, int x, int y)
+{
+  if (button != GLUT_LEFT_BUTTON)
+    return;
+
+  if (state == GLUT_DOWN)
+    {
+      mouse_x0 = mouse_x = x;
+      mouse_y0 = mouse_y = y;
+    }
+  else
+    {
+      mouse_x0 = -1;
+      mouse_y0 = -1;
+    }
+}
+
+
+void
+mouse_move_handler (int x, int y)
+{
+  mouse_x = x;
+  mouse_y = y;
+}
+
+
+void
 display (void)
 {
   int width, height, ticks;
@@ -119,11 +150,17 @@ display (void)
 
   uindex = glGetUniformLocation (prog, "iResolution");
   if (uindex >= 0)
-    glUniform2f (uindex, width, height);
+    glUniform3f (uindex, width, height, 1.0);
 
   uindex = glGetUniformLocation (prog, "resolution");
   if (uindex >= 0)
     glUniform2f (uindex, width, height);
+
+  uindex = glGetUniformLocation (prog, "iMouse");
+  if (uindex >= 0)
+    glUniform4f (uindex,
+                 mouse_x,  height - mouse_y,
+                 mouse_x0, mouse_y0 < 0 ? -1 : height - mouse_y0);
 
   uindex = glGetUniformLocation (prog, "led_color");
   if (uindex >= 0)
@@ -195,6 +232,8 @@ main (int   argc,
   init (frag_code);
 
   glutDisplayFunc (display);
+  glutMouseFunc   (mouse_press_handler);
+  glutMotionFunc  (mouse_move_handler);
   redisplay (1000/16);
 
   glutMainLoop ();
