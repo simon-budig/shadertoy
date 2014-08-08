@@ -144,6 +144,33 @@ redisplay (int value)
 }
 
 
+char *
+load_file (char *filename)
+{
+  FILE *f;
+  int size;
+  char *data;
+
+  f = fopen (filename, "rb");
+  fseek (f, 0, SEEK_END);
+  size = ftell (f);
+  fseek (f, 0, SEEK_SET);
+
+  data = malloc (size + 1);
+  if (fread (data, size, 1, f) < 1)
+    {
+      fprintf (stderr, "problem reading file %s\n", filename);
+      free (data);
+      return NULL;
+    }
+  fclose(f);
+
+  data[size] = '\0';
+
+  return data;
+}
+
+
 int
 main (int   argc,
       char *argv[])
@@ -151,15 +178,15 @@ main (int   argc,
   char *frag_code = NULL;
   glutInit (&argc, argv);
 
-  if (argc > 1)
+  if (argc != 2)
     {
-      int count = 0;
-      frag_code = malloc (10 * 1024);
-
-      count = fread (frag_code, 1, 10 * 1024 - 1, stdin);
-
-      frag_code[count] = '\0';
+      fprintf (stderr, "Usage: %s <shaderfile>\n", argv[0]);
+      exit (-1);
     }
+
+  frag_code = load_file (argv[1]);
+  if (!frag_code)
+    exit (-1);
 
   glutInitWindowSize (800, 600);
   glutInitDisplayMode (GLUT_RGBA | GLUT_DOUBLE);
@@ -168,7 +195,7 @@ main (int   argc,
   init (frag_code);
 
   glutDisplayFunc (display);
-  redisplay (1000/25);
+  redisplay (1000/16);
 
   glutMainLoop ();
 
