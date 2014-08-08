@@ -9,6 +9,11 @@ static double mouse_y0 = 0;
 static double mouse_x = 0;
 static double mouse_y = 0;
 
+static int window_x0 = -1;
+static int window_y0 = -1;
+static int window_width = -1;
+static int window_height = -1;
+
 GLint
 compile_shader (const GLenum  shader_type,
                 const GLchar *shader_source)
@@ -137,6 +142,21 @@ keyboard_handler (unsigned char key, int x, int y)
         exit (0);
         break;
 
+      case 'f': /* fullscreen */
+        if (window_width < 0)
+          {
+            window_x0 = glutGet (GLUT_WINDOW_X);
+            window_y0 = glutGet (GLUT_WINDOW_Y);
+            window_width = glutGet (GLUT_WINDOW_WIDTH);
+            window_height = glutGet (GLUT_WINDOW_HEIGHT);
+            glutFullScreen ();
+          }
+        else
+          {
+            glutPositionWindow (window_x0, window_y0);
+            glutReshapeWindow (window_width, window_height);
+            window_width = -1;
+          }
       default:
         break;
     }
