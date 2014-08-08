@@ -24,6 +24,9 @@ def get_shader (id):
    shader_json = response.read ().decode ('utf-8')
 
    j = json.loads (shader_json)
+   f = open ("/tmp/current-shader.json", "w")
+   f.write (json.dumps (j, indent=2))
+   f.close ()
 
    assert (len (j) == 1)
 
