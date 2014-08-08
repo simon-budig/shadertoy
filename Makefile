@@ -1,2 +1,2 @@
 shadertoy: shadertoy.c
-	gcc -Wall -Wextra -lglut -lGLEW -lGL -lm -o $@ $<
+	gcc -Wall -lglut -lGLEW -lGL -lm -o $@ $<

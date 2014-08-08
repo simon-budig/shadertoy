@@ -129,6 +129,21 @@ mouse_move_handler (int x, int y)
 
 
 void
+keyboard_handler (unsigned char key, int x, int y)
+{
+  switch (key)
+    {
+      case '\x1b':  /* Escape */
+        exit (0);
+        break;
+
+      default:
+        break;
+    }
+}
+
+
+void
 display (void)
 {
   int width, height, ticks;
@@ -231,9 +246,11 @@ main (int   argc,
 
   init (frag_code);
 
-  glutDisplayFunc (display);
-  glutMouseFunc   (mouse_press_handler);
-  glutMotionFunc  (mouse_move_handler);
+  glutDisplayFunc  (display);
+  glutMouseFunc    (mouse_press_handler);
+  glutMotionFunc   (mouse_move_handler);
+  glutKeyboardFunc (keyboard_handler);
+
   redisplay (1000/16);
 
   glutMainLoop ();
