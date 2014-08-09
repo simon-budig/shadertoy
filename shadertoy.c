@@ -48,10 +48,13 @@ keyboard_handler (unsigned char key, int x, int y)
   switch (key)
     {
       case '\x1b':  /* Escape */
+      case 'q':
+      case 'Q':
         glutLeaveMainLoop ();
         break;
 
       case 'f': /* fullscreen */
+      case 'F':
         glutFullScreenToggle ();
         break;
 
