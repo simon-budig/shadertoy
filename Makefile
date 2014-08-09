@@ -1,2 +1,2 @@
 shadertoy: shadertoy.c
-	gcc -Wall -lglut -lGLEW -lGL -lm -o $@ $<
+	gcc -Wall `pkg-config --libs --cflags gdk-pixbuf-2.0` -lglut -lGLEW -lGL -lm -o $@ $<

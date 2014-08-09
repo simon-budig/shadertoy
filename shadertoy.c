@@ -5,11 +5,194 @@
 #include <GL/glut.h>
 #include <GL/freeglut_ext.h>
 
+#include <gdk-pixbuf/gdk-pixbuf.h>
 
 static double mouse_x0 = 0;
 static double mouse_y0 = 0;
 static double mouse_x = 0;
 static double mouse_y = 0;
+
+static GLint prog = 0;
+static GLenum tex[4];
+
+void
+mouse_press_handler (int button, int state, int x, int y)
+{
+  if (button != GLUT_LEFT_BUTTON)
+    return;
+
+  if (state == GLUT_DOWN)
+    {
+      mouse_x0 = mouse_x = x;
+      mouse_y0 = mouse_y = y;
+    }
+  else
+    {
+      mouse_x0 = -1;
+      mouse_y0 = -1;
+    }
+}
+
+
+void
+mouse_move_handler (int x, int y)
+{
+  mouse_x = x;
+  mouse_y = y;
+}
+
+
+void
+keyboard_handler (unsigned char key, int x, int y)
+{
+  switch (key)
+    {
+      case '\x1b':  /* Escape */
+        glutLeaveMainLoop ();
+        break;
+
+      case 'f': /* fullscreen */
+        glutFullScreenToggle ();
+        break;
+
+      default:
+        break;
+    }
+}
+
+
+void
+redisplay (int value)
+{
+  glutPostRedisplay ();
+  glutTimerFunc (value, redisplay, value);
+}
+
+
+void
+display (void)
+{
+  int width, height, ticks;
+  GLint uindex;
+
+  glUseProgram (prog);
+
+  width  = glutGet (GLUT_WINDOW_WIDTH);
+  height = glutGet (GLUT_WINDOW_HEIGHT);
+  ticks  = glutGet (GLUT_ELAPSED_TIME);
+
+  uindex = glGetUniformLocation (prog, "iGlobalTime");
+  if (uindex >= 0)
+    glUniform1f (uindex, ((float) ticks) / 1000.0);
+
+  uindex = glGetUniformLocation (prog, "time");
+  if (uindex >= 0)
+    glUniform1f (uindex, ((float) ticks) / 1000.0);
+
+  uindex = glGetUniformLocation (prog, "iResolution");
+  if (uindex >= 0)
+    glUniform3f (uindex, width, height, 1.0);
+
+  uindex = glGetUniformLocation (prog, "iChannel0");
+  if (uindex >= 0)
+    {
+      glActiveTexture (GL_TEXTURE0 + 0);
+      glBindTexture (GL_TEXTURE_2D, tex[0]);
+      glUniform1i (uindex, 0);
+    }
+
+  uindex = glGetUniformLocation (prog, "iMouse");
+  if (uindex >= 0)
+    glUniform4f (uindex,
+                 mouse_x,  height - mouse_y,
+                 mouse_x0, mouse_y0 < 0 ? -1 : height - mouse_y0);
+
+  uindex = glGetUniformLocation (prog, "resolution");
+  if (uindex >= 0)
+    glUniform2f (uindex, width, height);
+
+  uindex = glGetUniformLocation (prog, "led_color");
+  if (uindex >= 0)
+    glUniform3f (uindex, 0.5, 0.3, 0.8);
+
+  glClear (GL_COLOR_BUFFER_BIT);
+  glRectf (-1.0, -1.0, 1.0, 1.0);
+
+  glutSwapBuffers ();
+}
+
+
+void
+load_texture (char    *filename,
+              GLenum   type,
+              GLenum  *tex_id)
+{
+  GdkPixbuf *pixbuf;
+  int width, height;
+  uint8_t *data;
+  GLfloat *tex_data;
+  int rowstride;
+  int cpp, bps;
+  int x, y, c;
+
+  pixbuf = gdk_pixbuf_new_from_file (filename, NULL);
+
+  width = gdk_pixbuf_get_width (pixbuf);
+  height = gdk_pixbuf_get_height (pixbuf);
+
+  data = gdk_pixbuf_get_pixels (pixbuf);
+  rowstride = gdk_pixbuf_get_rowstride (pixbuf);
+  bps = gdk_pixbuf_get_bits_per_sample (pixbuf);
+  cpp = gdk_pixbuf_get_n_channels (pixbuf);
+
+  if (bps != 8 && bps != 16)
+    {
+      fprintf (stderr, "unexpected bits per sample: %d\n", bps);
+      return;
+    }
+
+  if (cpp != 3 && cpp != 4)
+    {
+      fprintf (stderr, "unexpected n_channels: %d\n", cpp);
+      return;
+    }
+
+  tex_data = malloc (width * height * cpp * sizeof (GLfloat));
+  for (y = 0; y < height; y++)
+    {
+      uint8_t  *cur_row8  = (uint8_t *)  (data + y * rowstride);
+      uint16_t *cur_row16 = (uint16_t *) (data + y * rowstride);
+
+      for (x = 0; x < width; x++)
+        {
+          for (c = 0; c < cpp; c++)
+            {
+              if (bps == 8)
+                tex_data[(y * width + x) * cpp + c] = ((GLfloat) cur_row8[x * cpp + c]) / 255.0;
+              else
+                tex_data[(y * width + x) * cpp + c] = ((GLfloat) cur_row16[x * cpp + c]) / 65535.0;
+            }
+        }
+    }
+
+  glGenTextures (1, tex_id);
+  glBindTexture (type, *tex_id);
+  glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexImage2D (type, 0, cpp == 3 ? GL_RGB : GL_RGBA,
+                width, height,
+                0, cpp == 3 ? GL_RGB : GL_RGBA,
+                GL_FLOAT,
+                tex_data);
+
+  free (tex_data);
+  g_object_unref (pixbuf);
+
+  fprintf (stderr, "texture: %s, %dx%d, %d (%d) --> id %d\n",
+           filename, width, height, cpp, bps, *tex_id);
+
+  return;
+}
+
 
 GLint
 compile_shader (const GLenum  shader_type,
@@ -68,8 +251,6 @@ link_program (const GLchar *shader_source)
   return -1;
 }
 
-GLint prog = 0;
-
 void
 init (char *fragmentshader)
 {
@@ -100,105 +281,6 @@ init (char *fragmentshader)
 
   if (prog < 0)
     exit (-1);
-}
-
-
-void
-mouse_press_handler (int button, int state, int x, int y)
-{
-  if (button != GLUT_LEFT_BUTTON)
-    return;
-
-  if (state == GLUT_DOWN)
-    {
-      mouse_x0 = mouse_x = x;
-      mouse_y0 = mouse_y = y;
-    }
-  else
-    {
-      mouse_x0 = -1;
-      mouse_y0 = -1;
-    }
-}
-
-
-void
-mouse_move_handler (int x, int y)
-{
-  mouse_x = x;
-  mouse_y = y;
-}
-
-
-void
-keyboard_handler (unsigned char key, int x, int y)
-{
-  switch (key)
-    {
-      case '\x1b':  /* Escape */
-        glutLeaveMainLoop ();
-        break;
-
-      case 'f': /* fullscreen */
-        glutFullScreenToggle ();
-        break;
-
-      default:
-        break;
-    }
-}
-
-
-void
-display (void)
-{
-  int width, height, ticks;
-  GLint uindex;
-
-  glUseProgram (prog);
-
-  width  = glutGet (GLUT_WINDOW_WIDTH);
-  height = glutGet (GLUT_WINDOW_HEIGHT);
-  ticks  = glutGet (GLUT_ELAPSED_TIME);
-
-  uindex = glGetUniformLocation (prog, "iGlobalTime");
-  if (uindex >= 0)
-    glUniform1f (uindex, ((float) ticks) / 1000.0);
-
-  uindex = glGetUniformLocation (prog, "time");
-  if (uindex >= 0)
-    glUniform1f (uindex, ((float) ticks) / 1000.0);
-
-  uindex = glGetUniformLocation (prog, "iResolution");
-  if (uindex >= 0)
-    glUniform3f (uindex, width, height, 1.0);
-
-  uindex = glGetUniformLocation (prog, "resolution");
-  if (uindex >= 0)
-    glUniform2f (uindex, width, height);
-
-  uindex = glGetUniformLocation (prog, "iMouse");
-  if (uindex >= 0)
-    glUniform4f (uindex,
-                 mouse_x,  height - mouse_y,
-                 mouse_x0, mouse_y0 < 0 ? -1 : height - mouse_y0);
-
-  uindex = glGetUniformLocation (prog, "led_color");
-  if (uindex >= 0)
-    glUniform3f (uindex, 0.5, 0.3, 0.8);
-
-  glClear (GL_COLOR_BUFFER_BIT);
-  glRectf (-1.0, -1.0, 1.0, 1.0);
-
-  glutSwapBuffers ();
-}
-
-
-void
-redisplay (int value)
-{
-  glutPostRedisplay ();
-  glutTimerFunc (value, redisplay, value);
 }
 
 
@@ -251,6 +333,7 @@ main (int   argc,
   glutCreateWindow ("Shadertoy");
 
   init (frag_code);
+  load_texture ("presets/tex04.jpg", GL_TEXTURE_2D, &tex[0]);
 
   glutDisplayFunc  (display);
   glutMouseFunc    (mouse_press_handler);
