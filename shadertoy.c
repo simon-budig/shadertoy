@@ -101,6 +101,14 @@ display (void)
       glUniform1i (uindex, 0);
     }
 
+  uindex = glGetUniformLocation (prog, "iChannel1");
+  if (uindex >= 0)
+    {
+      glActiveTexture (GL_TEXTURE0 + 1);
+      glBindTexture (GL_TEXTURE_2D, tex[1]);
+      glUniform1i (uindex, 1);
+    }
+
   uindex = glGetUniformLocation (prog, "iMouse");
   if (uindex >= 0)
     glUniform4f (uindex,
@@ -177,12 +185,16 @@ load_texture (char    *filename,
 
   glGenTextures (1, tex_id);
   glBindTexture (type, *tex_id);
-  glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexImage2D (type, 0, cpp == 3 ? GL_RGB : GL_RGBA,
+  glTexImage2D (type, 0, GL_RGBA,
                 width, height,
                 0, cpp == 3 ? GL_RGB : GL_RGBA,
                 GL_FLOAT,
                 tex_data);
+  glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glGenerateMipmap (GL_TEXTURE_2D);
 
   free (tex_data);
   g_object_unref (pixbuf);
@@ -333,7 +345,8 @@ main (int   argc,
   glutCreateWindow ("Shadertoy");
 
   init (frag_code);
-  load_texture ("presets/tex04.jpg", GL_TEXTURE_2D, &tex[0]);
+  load_texture ("presets/tex03.jpg", GL_TEXTURE_2D, &tex[0]);
+  load_texture ("presets/tex12.png", GL_TEXTURE_2D, &tex[1]);
 
   glutDisplayFunc  (display);
   glutMouseFunc    (mouse_press_handler);
