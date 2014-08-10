@@ -18,6 +18,14 @@
 
 import sys, json, urllib.request, urllib.parse
 
+shaderinfo = """\
+// Shader downloaded from https://www.shadertoy.com/view/%(id)s
+// written by shadertoy user %(username)s
+//
+// Name: %(name)s
+// Description: %(description)s
+"""
+
 shaderdecls = """
 uniform vec3      iResolution;           // viewport resolution (in pixels)
 uniform float     iGlobalTime;           // shader playback time (in seconds)
@@ -51,7 +59,7 @@ def get_shader (id):
       name = s["info"]["name"]
       for p in s["renderpass"]:
          code = (p["code"])
-         return name, code
+         return name, code, s["info"]
    
 
 if __name__ == '__main__':
@@ -61,7 +69,7 @@ if __name__ == '__main__':
    for id in sys.argv[1:]:
       attempt = 0
       id = id.split("/")[-1]
-      name, code = get_shader (id)
+      name, code, info = get_shader (id)
       code = "".join (code.split ("\r"))
       f = None
       while f == None:
@@ -78,6 +86,7 @@ if __name__ == '__main__':
                print ("clean out your files please...", file=sys.stderr)
                sys.exit (0)
 
+      f.write (shaderinfo % info)
       f.write (shaderdecls)
       f.write (code)
       f.close ()
