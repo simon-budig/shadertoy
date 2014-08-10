@@ -1,5 +1,21 @@
 #!/usr/bin/env python3
 
+# Standalone Shadertoy
+# Copyright (C) 2014 Simon Budig <simon@budig.de>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import sys, json, urllib.request, urllib.parse
 
 shaderdecls = """
@@ -8,7 +24,8 @@ uniform float     iGlobalTime;           // shader playback time (in seconds)
 uniform float     iChannelTime[4];       // channel playback time (in seconds)
 uniform vec3      iChannelResolution[4]; // channel resolution (in pixels)
 uniform vec4      iMouse;                // mouse pixel coords. xy: current (if MLB down), zw: click
-// uniform samplerXX iChannel0..3;             // input channel. XX = 2D/Cube
+uniform sampler2D iChannel0;             // input channel. XX = 2D/Cube
+uniform sampler2D iChannel1;             // input channel. XX = 2D/Cube
 uniform vec4      iDate;                 // (year, month, day, time in secs)
 uniform float     iSampleRate;           // sound sample rate (i.e., 44100)
 \n"""
