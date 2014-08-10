@@ -64,7 +64,7 @@ def get_shader (id):
 
 if __name__ == '__main__':
    if len (sys.argv) < 2:
-      print ("Usage: %s <id>", file=sys.stderr)
+      print ("Usage: %s <id>" % sys.argv[0], file=sys.stderr)
 
    for id in sys.argv[1:]:
       attempt = 0
