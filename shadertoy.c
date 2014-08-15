@@ -32,6 +32,9 @@ static double mouse_y = 0;
 static GLint prog = 0;
 static GLenum tex[4];
 
+static time_t now, last, elapsed;
+static float frames;
+
 void
 mouse_press_handler (int button, int state, int x, int y)
 {
@@ -145,6 +148,17 @@ display (void)
 
   glClear (GL_COLOR_BUFFER_BIT);
   glRectf (-1.0, -1.0, 1.0, 1.0);
+  
+  frames++;
+  now = time (NULL);
+  elapsed = now - last;
+
+  if (elapsed >= 1.0)
+  {
+    printf ("FPS: %f\n", (frames / elapsed));
+    frames = 0;
+    last = now;
+  }
 
   glutSwapBuffers ();
 }
@@ -373,7 +387,7 @@ main (int   argc,
   glutMotionFunc   (mouse_move_handler);
   glutKeyboardFunc (keyboard_handler);
 
-  redisplay (1000/16);
+  redisplay (1000/60);
 
   glutMainLoop ();
 
