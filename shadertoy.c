@@ -16,7 +16,6 @@
  */
 
 #include <stdio.h>
-#include <sys/time.h>
 
 #include <GL/glew.h>
 #include <GL/glut.h>
@@ -31,9 +30,6 @@ static double mouse_y = 0;
 
 static GLint prog = 0;
 static GLenum tex[4];
-
-static time_t now, last, elapsed;
-static float frames;
 
 void
 mouse_press_handler (int button, int state, int x, int y)
@@ -95,6 +91,7 @@ redisplay (int value)
 void
 display (void)
 {
+  static int frames, last_time;
   int width, height, ticks;
   GLint uindex;
 
@@ -103,6 +100,17 @@ display (void)
   width  = glutGet (GLUT_WINDOW_WIDTH);
   height = glutGet (GLUT_WINDOW_HEIGHT);
   ticks  = glutGet (GLUT_ELAPSED_TIME);
+
+  if (frames == 0)
+    last_time = ticks;
+
+  frames++;
+
+  if (ticks - last_time >= 5000)
+    {
+      fprintf (stderr, "FPS: %.2f\n", 1000.0 * frames / (ticks - last_time));
+      frames = 0;
+    }
 
   uindex = glGetUniformLocation (prog, "iGlobalTime");
   if (uindex >= 0)
@@ -148,17 +156,6 @@ display (void)
 
   glClear (GL_COLOR_BUFFER_BIT);
   glRectf (-1.0, -1.0, 1.0, 1.0);
-  
-  frames++;
-  now = time (NULL);
-  elapsed = now - last;
-
-  if (elapsed >= 1.0)
-  {
-    printf ("FPS: %f\n", (frames / elapsed));
-    frames = 0;
-    last = now;
-  }
 
   glutSwapBuffers ();
 }
