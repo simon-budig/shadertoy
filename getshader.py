@@ -57,6 +57,10 @@ def get_shader (id):
 
    for s in j:
       name = s["info"]["name"]
+      desc = s["info"]["description"]
+      desc = "".join (desc.split("\r"))
+      desc = "\n//    ".join (desc.split("\n"))
+      s["info"]["description"] = desc
       for p in s["renderpass"]:
          code = (p["code"])
          return name, code, s["info"]
