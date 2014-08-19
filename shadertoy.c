@@ -16,6 +16,7 @@
  */
 
 #include <stdio.h>
+#include <getopt.h>
 
 #include <GL/glew.h>
 #include <GL/glut.h>
@@ -161,7 +162,7 @@ display (void)
 }
 
 
-void
+int
 load_texture (char    *filename,
               GLenum   type,
               GLenum  *tex_id)
@@ -187,13 +188,13 @@ load_texture (char    *filename,
   if (bps != 8 && bps != 16)
     {
       fprintf (stderr, "unexpected bits per sample: %d\n", bps);
-      return;
+      return 0;
     }
 
   if (cpp != 3 && cpp != 4)
     {
       fprintf (stderr, "unexpected n_channels: %d\n", cpp);
-      return;
+      return 0;
     }
 
   tex_data = malloc (width * height * cpp * sizeof (GLfloat));
@@ -233,7 +234,7 @@ load_texture (char    *filename,
   fprintf (stderr, "texture: %s, %dx%d, %d (%d) --> id %d\n",
            filename, width, height, cpp, bps, *tex_id);
 
-  return;
+  return 1;
 }
 
 
@@ -295,7 +296,7 @@ link_program (const GLchar *shader_source)
 }
 
 void
-init (char *fragmentshader)
+init_glew (void)
 {
   GLenum status;
 
@@ -319,11 +320,6 @@ init (char *fragmentshader)
       fprintf (stderr, "OpenGL 2.1 or better required for GLSL support.");
       exit (-1);
     }
-
-  prog = link_program (fragmentshader);
-
-  if (prog < 0)
-    exit (-1);
 }
 
 
@@ -361,23 +357,76 @@ main (int   argc,
   char *frag_code = NULL;
   glutInit (&argc, argv);
 
-  if (argc != 2)
-    {
-      fprintf (stderr, "Usage: %s <shaderfile>\n", argv[0]);
-      exit (-1);
-    }
-
-  frag_code = load_file (argv[1]);
-  if (!frag_code)
-    exit (-1);
+  static struct option long_options[] = {
+      { "texture",  required_argument, NULL,  't' },
+      { "help",     no_argument, NULL,        'h' },
+      { 0,          0,                 NULL,  0   }
+  };
 
   glutInitWindowSize (800, 600);
   glutInitDisplayMode (GLUT_RGBA | GLUT_DOUBLE);
   glutCreateWindow ("Shadertoy");
 
-  init (frag_code);
-  load_texture ("presets/tex03.jpg", GL_TEXTURE_2D, &tex[0]);
-  load_texture ("presets/tex12.png", GL_TEXTURE_2D, &tex[1]);
+  init_glew ();
+
+  /* option parsing */
+  while (1)
+    {
+      int c, slot;
+
+      c = getopt_long (argc, argv, ":t:?", long_options, NULL);
+      if (c == -1)
+        break;
+
+      switch (c)
+        {
+          case 't':
+            if (optarg[0] <  '0' || optarg[0] >  '3' ||
+                optarg[1] != ':' || optarg[2] == '\0')
+              {
+                fprintf (stderr, "Argument for texture file needs a slot from 0 to 3\n");
+                exit (1);
+              }
+
+            slot = optarg[0] - '0';
+
+            if (!load_texture (optarg + 2, GL_TEXTURE_2D, &tex[slot]))
+              {
+                fprintf (stderr, "Failed to load texture. Aborting.\n");
+                exit (1);
+              }
+            break;
+
+          case 'h':
+          case ':':
+          default:
+            fprintf (stderr, "Usage:\n  %s [options] <shaderfile>\n", argv[0]);
+            fprintf (stderr, "Options:    --help\n");
+            fprintf (stderr, "            --texture [0-3]:<textureimage>\n");
+            exit (c == ':' ? 1 : 0);
+            break;
+        }
+    }
+
+  if (optind != argc - 1)
+    {
+      fprintf (stderr, "No shaderfile specified. Aborting.\n");
+      exit (-1);
+    }
+
+  frag_code = load_file (argv[optind]);
+  if (!frag_code)
+    {
+      fprintf (stderr, "Failed to load Shaderfile. Aborting.\n");
+      exit (-1);
+    }
+
+  prog = link_program (frag_code);
+  if (prog < 0)
+    {
+      fprintf (stderr, "Failed to link shader program. Aborting\n");
+      exit (-1);
+    }
 
   glutDisplayFunc  (display);
   glutMouseFunc    (mouse_press_handler);
