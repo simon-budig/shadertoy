@@ -141,6 +141,22 @@ display (void)
       glUniform1i (uindex, 1);
     }
 
+  uindex = glGetUniformLocation (prog, "iChannel2");
+  if (uindex >= 0)
+    {
+      glActiveTexture (GL_TEXTURE0 + 2);
+      glBindTexture (GL_TEXTURE_2D, tex[1]);
+      glUniform1i (uindex, 2);
+    }
+
+  uindex = glGetUniformLocation (prog, "iChannel3");
+  if (uindex >= 0)
+    {
+      glActiveTexture (GL_TEXTURE0 + 3);
+      glBindTexture (GL_TEXTURE_2D, tex[1]);
+      glUniform1i (uindex, 3);
+    }
+
   uindex = glGetUniformLocation (prog, "iMouse");
   if (uindex >= 0)
     glUniform4f (uindex,
@@ -269,8 +285,12 @@ link_program (const GLchar *shader_source)
 {
   GLint frag, program;
   GLint status = GL_FALSE;
-  GLint loglen;
+  GLint loglen, n_uniforms;
+  GLuint i;
   GLchar *error_message;
+
+  char *names[] = { "iMouse", "iResolution", "fump" };
+  GLuint indices[3];
 
   frag = compile_shader (GL_FRAGMENT_SHADER, shader_source);
   if (frag < 0)
@@ -280,19 +300,28 @@ link_program (const GLchar *shader_source)
 
   glAttachShader (program, frag);
   glLinkProgram (program);
-  glDeleteShader (frag);
+  // glDeleteShader (frag);
 
   glGetProgramiv (program, GL_LINK_STATUS, &status);
-  if (status == GL_TRUE)
-    return program;
+  if (status != GL_TRUE)
+    {
+      glGetProgramiv (program, GL_INFO_LOG_LENGTH, &loglen);
+      error_message = calloc (loglen, sizeof (GLchar));
+      glGetProgramInfoLog (program, loglen, NULL, error_message);
+      fprintf (stderr, "program failed to link:\n   %s\n", error_message);
+      free (error_message);
+      return -1;
+    }
 
-  glGetProgramiv (program, GL_INFO_LOG_LENGTH, &loglen);
-  error_message = calloc (loglen, sizeof (GLchar));
-  glGetProgramInfoLog (program, loglen, NULL, error_message);
-  fprintf (stderr, "program failed to link:\n   %s\n", error_message);
-  free (error_message);
+  /* diagnostics */
+  glGetProgramiv (program, GL_ACTIVE_UNIFORMS, &n_uniforms);
+  fprintf (stderr, "%d uniforms:\n", n_uniforms);
 
-  return -1;
+  // glGetUniformIndices(program, 3, names, indices);
+  fprintf (stderr, "  %s - %d\n", names[0], indices[0]);
+  fprintf (stderr, "  %s - %d\n", names[1], indices[1]);
+  fprintf (stderr, "  %s - %d\n", names[2], indices[2]);
+  return program;
 }
 
 void
