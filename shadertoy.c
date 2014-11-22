@@ -95,12 +95,14 @@ display (void)
   static int frames, last_time;
   int width, height, ticks;
   GLint uindex;
+  struct timespec ts;
 
   glUseProgram (prog);
 
   width  = glutGet (GLUT_WINDOW_WIDTH);
   height = glutGet (GLUT_WINDOW_HEIGHT);
-  ticks  = glutGet (GLUT_ELAPSED_TIME);
+  clock_gettime (CLOCK_MONOTONIC_RAW, &ts);
+  ticks  = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 
   if (frames == 0)
     last_time = ticks;
