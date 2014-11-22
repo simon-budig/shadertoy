@@ -288,11 +288,11 @@ link_program (const GLchar *shader_source)
   GLint frag, program;
   GLint status = GL_FALSE;
   GLint loglen, n_uniforms;
-  GLuint i;
   GLchar *error_message;
+  GLint i;
 
-  char *names[] = { "iMouse", "iResolution", "fump" };
-  GLuint indices[3];
+  GLchar name[80];
+  GLsizei namelen;
 
   frag = compile_shader (GL_FRAGMENT_SHADER, shader_source);
   if (frag < 0)
@@ -319,10 +319,13 @@ link_program (const GLchar *shader_source)
   glGetProgramiv (program, GL_ACTIVE_UNIFORMS, &n_uniforms);
   fprintf (stderr, "%d uniforms:\n", n_uniforms);
 
-  // glGetUniformIndices(program, 3, names, indices);
-  fprintf (stderr, "  %s - %d\n", names[0], indices[0]);
-  fprintf (stderr, "  %s - %d\n", names[1], indices[1]);
-  fprintf (stderr, "  %s - %d\n", names[2], indices[2]);
+  for (i = 0; i < n_uniforms; i++)
+    {
+      glGetActiveUniformName (program, i, 79, &namelen, name);
+      name[namelen] = '\0';
+      fprintf (stderr, "  %2d: %s\n", i, name);
+    }
+
   return program;
 }
 
