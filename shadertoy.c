@@ -336,17 +336,18 @@ link_program (const GLchar *shader_source)
     }
 
   /* diagnostics */
-#if 0
   glGetProgramiv (program, GL_ACTIVE_UNIFORMS, &n_uniforms);
   fprintf (stderr, "%d uniforms:\n", n_uniforms);
 
   for (i = 0; i < n_uniforms; i++)
     {
-      glGetActiveUniformName (program, i, 79, &namelen, name);
+      GLint size;
+      GLenum type;
+
+      glGetActiveUniform (program, i, 79, &namelen, &size, &type, name);
       name[namelen] = '\0';
-      fprintf (stderr, "  %2d: %s\n", i, name);
+      fprintf (stderr, "  %2d: %-20s (type: 0x%04x, size: %d)\n", i, name, type, size);
     }
-#endif
 
   return program;
 }
