@@ -37,13 +37,19 @@ static double mouse_y = 0;
 
 static GLint prog = 0;
 static GLenum tex[4];
-static int sockfd = -1;
+static int sockfd  = -1;
+
+#define IPC_ADDR (0x7f000000)
+#define IPC_PORT (4242)
 
 void ipc_socket_handle_message (void);
+void ipc_socket_send_message (char *msg);
 
 void
 mouse_press_handler (int button, int state, int x, int y)
 {
+  char msg[1000];
+
   if (button != GLUT_LEFT_BUTTON)
     return;
 
@@ -57,14 +63,23 @@ mouse_press_handler (int button, int state, int x, int y)
       mouse_x0 = -1;
       mouse_y0 = -1;
     }
+
+  snprintf (msg, sizeof (msg), "iMouse:%.0f,%.0f,%.0f,%.0f",
+            mouse_x, mouse_y, mouse_x0, mouse_y0);
+  ipc_socket_send_message (msg);
 }
 
 
 void
 mouse_move_handler (int x, int y)
 {
+  char msg[1000];
   mouse_x = x;
   mouse_y = y;
+
+  snprintf (msg, sizeof (msg), "iMouse:%.0f,%.0f,%.0f,%.0f",
+            mouse_x, mouse_y, mouse_x0, mouse_y0);
+  ipc_socket_send_message (msg);
 }
 
 
@@ -429,19 +444,32 @@ load_file (char *filename)
 
 
 void
+ipc_socket_send_message (char *msg)
+{
+  struct sockaddr_in servaddr;
+
+  bzero (&servaddr, sizeof (servaddr));
+  servaddr.sin_family      = AF_INET;
+  servaddr.sin_addr.s_addr = htonl (IPC_ADDR);
+  servaddr.sin_port        = htons (IPC_PORT);
+
+  sendto (sockfd, msg ,strlen (msg), 0,
+          (struct sockaddr *) &servaddr, sizeof(servaddr));
+}
+
+
+void
 ipc_socket_handle_message (void)
 {
-  char mesg[1000];
-  unsigned int len;
-  struct sockaddr_in cliaddr;
+  char msg[1000];
+  int len;
   char *pos, *token;
 
-  recvfrom (sockfd, mesg, sizeof (mesg),
-            0, (struct sockaddr *) &cliaddr, &len);
+  len = recvfrom (sockfd, msg, sizeof (msg) - 1, 0, NULL, NULL);
 
-  mesg[len] = '\0';
+  msg[len] = '\0';
 
-  pos = mesg;
+  pos = msg;
   token = strsep (&pos, ":");
 
   if (strcmp (token, "iMouse") == 0)
@@ -474,8 +502,6 @@ ipc_socket_handle_message (void)
             }
         }
     }
-
-  fprintf (stderr, "msg: %s\n", mesg);
 }
 
 
@@ -483,7 +509,6 @@ int
 ipc_socket_open (int port)
 {
   struct sockaddr_in servaddr;
-  socklen_t len;
   int ret;
   int flag = 1;
 
@@ -492,10 +517,11 @@ ipc_socket_open (int port)
     perror ("socket");
 
   setsockopt (sockfd, SOL_SOCKET, SO_REUSEPORT, (char*) &flag, sizeof (flag));
+  setsockopt (sockfd, SOL_SOCKET, SO_BROADCAST, (char*) &flag, sizeof (flag));
 
   bzero (&servaddr, sizeof (servaddr));
   servaddr.sin_family      = AF_INET;
-  servaddr.sin_addr.s_addr = htonl (INADDR_ANY);
+  servaddr.sin_addr.s_addr = htonl (IPC_ADDR);
   servaddr.sin_port        = htons (port);
 
   ret = bind (sockfd, (struct sockaddr *) &servaddr, sizeof (servaddr));
@@ -609,7 +635,7 @@ main (int   argc,
       exit (-1);
     }
 
-  ipc_socket_open (4242);
+  ipc_socket_open (IPC_PORT);
 
   glutDisplayFunc  (display);
   glutMouseFunc    (mouse_press_handler);
