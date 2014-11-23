@@ -183,7 +183,9 @@ display (void)
 int
 load_texture (char    *filename,
               GLenum   type,
-              GLenum  *tex_id)
+              GLenum  *tex_id,
+              char     nearest,
+              char     repeat)
 {
   GdkPixbuf *pixbuf;
   int width, height;
@@ -240,11 +242,28 @@ load_texture (char    *filename,
                 0, cpp == 3 ? GL_RGB : GL_RGBA,
                 GL_FLOAT,
                 tex_data);
-  glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-  glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  glGenerateMipmap (GL_TEXTURE_2D);
+  if (nearest)
+    {
+      glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    }
+  else
+    {
+      glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+      glGenerateMipmap (GL_TEXTURE_2D);
+    }
+
+  if (repeat)
+    {
+      glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+      glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    }
+  else
+    {
+      glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+      glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+    }
 
   free (tex_data);
   g_object_unref (pixbuf);
@@ -316,6 +335,7 @@ link_program (const GLchar *shader_source)
     }
 
   /* diagnostics */
+#if 0
   glGetProgramiv (program, GL_ACTIVE_UNIFORMS, &n_uniforms);
   fprintf (stderr, "%d uniforms:\n", n_uniforms);
 
@@ -325,6 +345,7 @@ link_program (const GLchar *shader_source)
       name[namelen] = '\0';
       fprintf (stderr, "  %2d: %s\n", i, name);
     }
+#endif
 
   return program;
 }
@@ -424,7 +445,7 @@ main (int   argc,
 
             slot = optarg[0] - '0';
 
-            if (!load_texture (optarg + 2, GL_TEXTURE_2D, &tex[slot]))
+            if (!load_texture (optarg + 2, GL_TEXTURE_2D, &tex[slot], 1, 0))
               {
                 fprintf (stderr, "Failed to load texture. Aborting.\n");
                 exit (1);
