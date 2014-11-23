@@ -18,6 +18,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <getopt.h>
+#include <poll.h>
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 #include <GL/glew.h>
 #include <GL/glut.h>
@@ -32,6 +37,9 @@ static double mouse_y = 0;
 
 static GLint prog = 0;
 static GLenum tex[4];
+static int sockfd = -1;
+
+void ipc_socket_handle_message (void);
 
 void
 mouse_press_handler (int button, int state, int x, int y)
@@ -85,6 +93,19 @@ keyboard_handler (unsigned char key, int x, int y)
 void
 redisplay (int value)
 {
+  struct pollfd udp;
+  int ret;
+
+  udp.fd = sockfd;
+  udp.events = POLLIN;
+
+  ret = poll (&udp, 1, 0);
+
+  if (ret >= 1)
+    {
+      ipc_socket_handle_message ();
+    }
+
   glutPostRedisplay ();
   glutTimerFunc (value, redisplay, value);
 }
@@ -407,6 +428,84 @@ load_file (char *filename)
 }
 
 
+void
+ipc_socket_handle_message (void)
+{
+  char mesg[1000];
+  unsigned int len;
+  struct sockaddr_in cliaddr;
+  char *pos, *token;
+
+  recvfrom (sockfd, mesg, sizeof (mesg),
+            0, (struct sockaddr *) &cliaddr, &len);
+
+  mesg[len] = '\0';
+
+  pos = mesg;
+  token = strsep (&pos, ":");
+
+  if (strcmp (token, "iMouse") == 0)
+    {
+      int i = 0;
+
+      for (i = 0; i < 4; i++)
+        {
+          double coord = 0.0;
+          token = strsep (&pos, ",");
+          if (!token)
+            break;
+          coord = atof (token);
+          switch (i)
+            {
+              case 0:
+                mouse_x = coord;
+                break;
+              case 1:
+                mouse_y = coord;
+                break;
+              case 2:
+                mouse_x0 = coord;
+                break;
+              case 3:
+                mouse_y0 = coord;
+                break;
+              default:
+                break;
+            }
+        }
+    }
+
+  fprintf (stderr, "msg: %s\n", mesg);
+}
+
+
+int
+ipc_socket_open (int port)
+{
+  struct sockaddr_in servaddr;
+  socklen_t len;
+  int ret;
+  int flag = 1;
+
+  sockfd = socket (AF_INET, SOCK_DGRAM, 0);
+  if (sockfd < 0)
+    perror ("socket");
+
+  setsockopt (sockfd, SOL_SOCKET, SO_REUSEPORT, (char*) &flag, sizeof (flag));
+
+  bzero (&servaddr, sizeof (servaddr));
+  servaddr.sin_family      = AF_INET;
+  servaddr.sin_addr.s_addr = htonl (INADDR_ANY);
+  servaddr.sin_port        = htons (port);
+
+  ret = bind (sockfd, (struct sockaddr *) &servaddr, sizeof (servaddr));
+  if (ret < 0)
+    perror ("bind");
+
+  return sockfd;
+}
+
+
 int
 main (int   argc,
       char *argv[])
@@ -509,6 +608,8 @@ main (int   argc,
       fprintf (stderr, "Failed to link shader program. Aborting\n");
       exit (-1);
     }
+
+  ipc_socket_open (4242);
 
   glutDisplayFunc  (display);
   glutMouseFunc    (mouse_press_handler);
