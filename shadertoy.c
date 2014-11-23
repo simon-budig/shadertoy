@@ -16,6 +16,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include <getopt.h>
 
 #include <GL/glew.h>
@@ -428,6 +429,7 @@ main (int   argc,
   while (1)
     {
       int c, slot;
+      char nearest, repeat;
 
       c = getopt_long (argc, argv, ":t:?", long_options, NULL);
       if (c == -1)
@@ -436,8 +438,7 @@ main (int   argc,
       switch (c)
         {
           case 't':
-            if (optarg[0] <  '0' || optarg[0] >  '3' ||
-                optarg[1] != ':' || optarg[2] == '\0')
+            if (optarg[0] <  '0' || optarg[0] >  '3' || strchr (optarg, ':') == NULL)
               {
                 fprintf (stderr, "Argument for texture file needs a slot from 0 to 3\n");
                 exit (1);
@@ -445,7 +446,32 @@ main (int   argc,
 
             slot = optarg[0] - '0';
 
-            if (!load_texture (optarg + 2, GL_TEXTURE_2D, &tex[slot], 1, 0))
+            repeat = 1;
+            nearest = 0;
+
+            for (c = 1; optarg[c] != ':' && optarg[c] != '\0'; c++)
+              {
+                switch (optarg[c])
+                  {
+                    case 'r':
+                      repeat = 1;
+                      break;
+                    case 'o':
+                      repeat = 0;
+                      break;
+                    case 'i':
+                      nearest = 0;
+                      break;
+                    case 'n':
+                      nearest = 1;
+                      break;
+                    default:
+                      break;
+                  }
+              }
+
+            if (optarg[c] != ':' ||
+                !load_texture (optarg + c + 1, GL_TEXTURE_2D, &tex[slot], nearest, repeat))
               {
                 fprintf (stderr, "Failed to load texture. Aborting.\n");
                 exit (1);
