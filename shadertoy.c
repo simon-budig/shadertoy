@@ -114,9 +114,7 @@ redisplay (int value)
   udp.fd = sockfd;
   udp.events = POLLIN;
 
-  ret = poll (&udp, 1, 0);
-
-  if (ret >= 1)
+  while ((ret = poll (&udp, 1, 0)) >= 1)
     {
       ipc_socket_handle_message ();
     }
