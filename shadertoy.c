@@ -35,6 +35,9 @@ static double mouse_y0 = 0;
 static double mouse_x = 0;
 static double mouse_y = 0;
 
+/* width, height, x0, y0 (top left) */
+static double geometry[4] = { 0, };
+
 static GLint prog = 0;
 static GLenum tex[4];
 static int sockfd  = -1;
@@ -49,14 +52,27 @@ void
 mouse_press_handler (int button, int state, int x, int y)
 {
   char msg[1000];
+  int x0, y0, height;
 
   if (button != GLUT_LEFT_BUTTON)
     return;
 
   if (state == GLUT_DOWN)
     {
-      mouse_x0 = mouse_x = x;
-      mouse_y0 = mouse_y = y;
+      x0     = glutGet (GLUT_WINDOW_X);
+      y0     = glutGet (GLUT_WINDOW_Y);
+      height = glutGet (GLUT_WINDOW_HEIGHT);
+
+      if (geometry[0] > 0.1 && geometry[1] > 0.1)
+        {
+          mouse_x0 = mouse_x = x + x0;
+          mouse_y0 = mouse_y = geometry[1] - y0 - y;
+        }
+      else
+        {
+          mouse_x0 = mouse_x = x;
+          mouse_y0 = mouse_y = height - y;
+        }
     }
   else
     {
@@ -74,8 +90,22 @@ void
 mouse_move_handler (int x, int y)
 {
   char msg[1000];
-  mouse_x = x;
-  mouse_y = y;
+  int x0, y0, height;
+
+      x0     = glutGet (GLUT_WINDOW_X);
+      y0     = glutGet (GLUT_WINDOW_Y);
+      height = glutGet (GLUT_WINDOW_HEIGHT);
+
+      if (geometry[0] > 0.1 && geometry[1] > 0.1)
+        {
+          mouse_x = x + x0;
+          mouse_y = geometry[1] - y0 - y;
+        }
+      else
+        {
+          mouse_x = x;
+          mouse_y = height - y;
+        }
 
   snprintf (msg, sizeof (msg), "iMouse:%.0f,%.0f,%.0f,%.0f",
             mouse_x, mouse_y, mouse_x0, mouse_y0);
@@ -128,12 +158,14 @@ void
 display (void)
 {
   static int frames, last_time;
-  int width, height, ticks;
+  int x0, y0, width, height, ticks;
   GLint uindex;
   struct timespec ts;
 
   glUseProgram (prog);
 
+  x0     = glutGet (GLUT_WINDOW_X);
+  y0     = glutGet (GLUT_WINDOW_Y);
   width  = glutGet (GLUT_WINDOW_WIDTH);
   height = glutGet (GLUT_WINDOW_HEIGHT);
   clock_gettime (CLOCK_MONOTONIC_RAW, &ts);
@@ -160,7 +192,32 @@ display (void)
 
   uindex = glGetUniformLocation (prog, "iResolution");
   if (uindex >= 0)
-    glUniform3f (uindex, width, height, 1.0);
+    {
+      if (geometry[0] > 0.1 && geometry[1] > 0.1)
+        glUniform3f (uindex, geometry[0], geometry[1], 1.0);
+      else
+        glUniform3f (uindex, width, height, 1.0);
+    }
+
+  uindex = glGetUniformLocation (prog, "iOffset");
+  if (uindex >= 0)
+    {
+      if (geometry[0] > 0.1 && geometry[1] > 0.1)
+        {
+          glUniform2f (uindex,
+                       x0 + geometry[2],
+                       geometry[1] - (y0 + height) - geometry[3]);
+        }
+      else
+        {
+          glUniform2f (uindex, 0.0, 0.0);
+        }
+    }
+
+  uindex = glGetUniformLocation (prog, "iMouse");
+  if (uindex >= 0)
+    glUniform4f (uindex, mouse_x,  mouse_y, mouse_x0, mouse_y0);
+
 
   uindex = glGetUniformLocation (prog, "iChannel0");
   if (uindex >= 0)
@@ -194,15 +251,14 @@ display (void)
       glUniform1i (uindex, 3);
     }
 
-  uindex = glGetUniformLocation (prog, "iMouse");
-  if (uindex >= 0)
-    glUniform4f (uindex,
-                 mouse_x,  height - mouse_y,
-                 mouse_x0, mouse_y0 < 0 ? -1 : height - mouse_y0);
-
   uindex = glGetUniformLocation (prog, "resolution");
   if (uindex >= 0)
-    glUniform2f (uindex, width, height);
+    {
+      if (geometry[0] > 0.1 && geometry[1] > 0.1)
+        glUniform2f (uindex, geometry[0], geometry[1]);
+      else
+        glUniform2f (uindex, width, height);
+    }
 
   uindex = glGetUniformLocation (prog, "led_color");
   if (uindex >= 0)
@@ -539,6 +595,7 @@ main (int   argc,
 
   static struct option long_options[] = {
       { "texture",  required_argument, NULL,  't' },
+      { "geometry", required_argument, NULL,  'g' },
       { "help",     no_argument, NULL,        'h' },
       { 0,          0,                 NULL,  0   }
   };
@@ -552,15 +609,28 @@ main (int   argc,
   /* option parsing */
   while (1)
     {
-      int c, slot;
+      int c, slot, i;
       char nearest, repeat;
 
-      c = getopt_long (argc, argv, ":t:?", long_options, NULL);
+      c = getopt_long (argc, argv, ":t:g:?", long_options, NULL);
       if (c == -1)
         break;
 
       switch (c)
         {
+          case 'g':
+            for (i = 0; i < 4; i++)
+              {
+                char *token = strsep (&optarg, "x+");
+                if (!token)
+                  break;
+                geometry[i] = atof (token);
+              }
+
+            fprintf (stderr, "geometry: %.0fx%.0f+%.0f+%.0f\n",
+                     geometry[0], geometry[1], geometry[2], geometry[3]);
+            break;
+
           case 't':
             if (optarg[0] <  '0' || optarg[0] >  '3' || strchr (optarg, ':') == NULL)
               {
