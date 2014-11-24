@@ -30,13 +30,11 @@
 
 #include <gdk-pixbuf/gdk-pixbuf.h>
 
-static double mouse_x0 = 0;
-static double mouse_y0 = 0;
-static double mouse_x = 0;
-static double mouse_y = 0;
-
 /* width, height, x0, y0 (top left) */
 static double geometry[4] = { 0, };
+
+/* x, y, x_press, y_press  (in target coords) */
+static double mouse[4] = { 0, };
 
 static GLint prog = 0;
 static GLenum tex[4];
@@ -65,23 +63,23 @@ mouse_press_handler (int button, int state, int x, int y)
 
       if (geometry[0] > 0.1 && geometry[1] > 0.1)
         {
-          mouse_x0 = mouse_x = x + x0;
-          mouse_y0 = mouse_y = geometry[1] - y0 - y;
+          mouse[2] = mouse[0] = x + x0;
+          mouse[3] = mouse[1] = geometry[1] - y0 - y;
         }
       else
         {
-          mouse_x0 = mouse_x = x;
-          mouse_y0 = mouse_y = height - y;
+          mouse[2] = mouse[0] = x;
+          mouse[3] = mouse[1] = height - y;
         }
     }
   else
     {
-      mouse_x0 = -1;
-      mouse_y0 = -1;
+      mouse[2] = -1;
+      mouse[3] = -1;
     }
 
   snprintf (msg, sizeof (msg), "iMouse:%.0f,%.0f,%.0f,%.0f",
-            mouse_x, mouse_y, mouse_x0, mouse_y0);
+            mouse[0], mouse[1], mouse[2], mouse[3]);
   ipc_socket_send_message (msg);
 }
 
@@ -98,17 +96,17 @@ mouse_move_handler (int x, int y)
 
       if (geometry[0] > 0.1 && geometry[1] > 0.1)
         {
-          mouse_x = x + x0;
-          mouse_y = geometry[1] - y0 - y;
+          mouse[0] = x + x0;
+          mouse[1] = geometry[1] - y0 - y;
         }
       else
         {
-          mouse_x = x;
-          mouse_y = height - y;
+          mouse[0] = x;
+          mouse[1] = height - y;
         }
 
   snprintf (msg, sizeof (msg), "iMouse:%.0f,%.0f,%.0f,%.0f",
-            mouse_x, mouse_y, mouse_x0, mouse_y0);
+            mouse[0], mouse[1], mouse[2], mouse[3]);
   ipc_socket_send_message (msg);
 }
 
@@ -216,7 +214,7 @@ display (void)
 
   uindex = glGetUniformLocation (prog, "iMouse");
   if (uindex >= 0)
-    glUniform4f (uindex, mouse_x,  mouse_y, mouse_x0, mouse_y0);
+    glUniform4f (uindex, mouse[0],  mouse[1], mouse[2], mouse[3]);
 
 
   uindex = glGetUniformLocation (prog, "iChannel0");
@@ -532,28 +530,10 @@ ipc_socket_handle_message (void)
 
       for (i = 0; i < 4; i++)
         {
-          double coord = 0.0;
           token = strsep (&pos, ",");
           if (!token)
             break;
-          coord = atof (token);
-          switch (i)
-            {
-              case 0:
-                mouse_x = coord;
-                break;
-              case 1:
-                mouse_y = coord;
-                break;
-              case 2:
-                mouse_x0 = coord;
-                break;
-              case 3:
-                mouse_y0 = coord;
-                break;
-              default:
-                break;
-            }
+          mouse[i] = atof (token);
         }
     }
 }
