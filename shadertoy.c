@@ -63,8 +63,8 @@ mouse_press_handler (int button, int state, int x, int y)
 
       if (geometry[0] > 0.1 && geometry[1] > 0.1)
         {
-          mouse[2] = mouse[0] = x + x0;
-          mouse[3] = mouse[1] = geometry[1] - y0 - y;
+          mouse[2] = mouse[0] =               geometry[2] + x0 + x;
+          mouse[3] = mouse[1] = geometry[1] - geometry[3] - y0 - y;
         }
       else
         {
@@ -96,8 +96,8 @@ mouse_move_handler (int x, int y)
 
       if (geometry[0] > 0.1 && geometry[1] > 0.1)
         {
-          mouse[0] = x + x0;
-          mouse[1] = geometry[1] - y0 - y;
+          mouse[0] =               geometry[2] + x0 + x;
+          mouse[1] = geometry[1] - geometry[3] - y0 - y;
         }
       else
         {
