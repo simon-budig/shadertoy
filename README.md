@@ -6,15 +6,30 @@ available at http://shadertoy.com/ into a standalone utility.
 ## Limitations
 
 * Sound functionality is unavailable
-* Texture support is limited to two hardcoded textures right now
 * iDate and iSampleRate is unavailable
 
 ## Usage
 
-Start the shadertoy with the glsl program as commandline argument
+### Running shaders
 
-You can download shaders from shadertoy.com by using the "getshader"
+You can start shadertoy with the shader file as argument:
+```
+./shadertoy <shader>
+```
+
+Also, you can specify images, which will be used as textures. For example:
+```
+./shadertoy --texture 0:texture0.png --texture 1:texture1.png <shader>
+```
+The textures will be linked inside the shader. (iChannel0, iChannel1...)
+
+### Getting shaders
+
+You can download shaders from shadertoy.com by using the "getshader.py"
 script, which takes either the ID or the URL of the target shader
 as commandline argument. It will save the shader code under the
 given name of the shader into the current working directory,
-as well as the full json object as a temporary file /tmp/current-shader.json.
+as well as the full json object as a temporary file /tmp/current-shader.json. I.e.:
+```
+./getshader MdX3zr
+```
