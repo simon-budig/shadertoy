@@ -22,6 +22,7 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <netinet/in.h>
 
 #include <GL/glew.h>
@@ -468,6 +469,13 @@ init_glew (void)
 }
 
 
+int
+file_exists (char *filename)
+{
+  struct stat buffer;
+  return (stat (filename, &buffer) == 0);
+}
+
 char *
 load_file (char *filename)
 {
@@ -475,6 +483,12 @@ load_file (char *filename)
   int size;
   char *data;
 
+  if (file_exists(filename) != 1)
+  {
+    fprintf(stderr, "file %s doesn't exist\n", filename);
+    return NULL;
+  }
+  
   f = fopen (filename, "rb");
   fseek (f, 0, SEEK_END);
   size = ftell (f);
