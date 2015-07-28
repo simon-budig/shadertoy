@@ -39,6 +39,7 @@ static double mouse[4] = { 0, };
 static GLint prog = 0;
 static GLenum tex[4];
 static int sockfd  = -1;
+int start_time = 0;
 
 #define IPC_ADDR (0x7f000000)
 #define IPC_PORT (4242)
@@ -168,6 +169,9 @@ display (void)
   height = glutGet (GLUT_WINDOW_HEIGHT);
   clock_gettime (CLOCK_MONOTONIC_RAW, &ts);
   ticks  = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+  
+  if(start_time == 0)
+    start_time = ticks;
 
   if (frames == 0)
     last_time = ticks;
@@ -182,11 +186,11 @@ display (void)
 
   uindex = glGetUniformLocation (prog, "iGlobalTime");
   if (uindex >= 0)
-    glUniform1f (uindex, ((float) ticks) / 1000.0);
+    glUniform1f (uindex, (ticks - start_time) / 1000.0);
 
   uindex = glGetUniformLocation (prog, "time");
   if (uindex >= 0)
-    glUniform1f (uindex, ((float) ticks) / 1000.0);
+    glUniform1f (uindex, (ticks - start_time) / 1000.0);
 
   uindex = glGetUniformLocation (prog, "iResolution");
   if (uindex >= 0)
