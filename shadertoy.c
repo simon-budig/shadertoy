@@ -237,7 +237,7 @@ display (void)
   if (uindex >= 0)
     {
       glActiveTexture (GL_TEXTURE0 + 2);
-      glBindTexture (GL_TEXTURE_2D, tex[1]);
+      glBindTexture (GL_TEXTURE_2D, tex[2]);
       glUniform1i (uindex, 2);
     }
 
@@ -245,7 +245,7 @@ display (void)
   if (uindex >= 0)
     {
       glActiveTexture (GL_TEXTURE0 + 3);
-      glBindTexture (GL_TEXTURE_2D, tex[1]);
+      glBindTexture (GL_TEXTURE_2D, tex[3]);
       glUniform1i (uindex, 3);
     }
 
