@@ -38,6 +38,18 @@ uniform vec4      iDate;                 // (year, month, day, time in secs)
 uniform float     iSampleRate;           // sound sample rate (i.e., 44100)
 \n"""
 
+# see https://www.shadertoy.com/js/effect.js?v=8
+
+shadermain = """\n
+void main (void)
+{
+  vec4 color = vec4 (0.0, 0.0, 0.0, 1.0);
+  mainImage (color, gl_FragCoord.xy);
+  color.w = 1.0;
+  gl_FragColor = color;
+}
+"""
+
 def get_shader (id):
    url = 'https://www.shadertoy.com/shadertoy'
    headers = { 'Referer' : 'https://www.shadertoy.com/' }
@@ -64,7 +76,7 @@ def get_shader (id):
       for p in s["renderpass"]:
          code = (p["code"])
          return name, code, s["info"]
-   
+
 
 if __name__ == '__main__':
    if len (sys.argv) < 2:
@@ -93,6 +105,7 @@ if __name__ == '__main__':
       f.write (shaderinfo % info)
       f.write (shaderdecls)
       f.write (code)
+      f.write (shadermain)
       f.close ()
       print ("wrote shader to \"%s\"" % fname, file=sys.stderr)
 
