@@ -28,7 +28,7 @@ shaderinfo = """\
 
 shaderdecls = """
 uniform vec3      iResolution;           // viewport resolution (in pixels)
-uniform float     iGlobalTime;           // shader playback time (in seconds)
+uniform float     iTime;                 // shader playback time (in seconds)
 uniform float     iChannelTime[4];       // channel playback time (in seconds)
 uniform vec3      iChannelResolution[4]; // channel resolution (in pixels)
 uniform vec4      iMouse;                // mouse pixel coords. xy: current (if MLB down), zw: click
