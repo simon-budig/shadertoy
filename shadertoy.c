@@ -180,7 +180,7 @@ display (void)
       frames = 0;
     }
 
-  uindex = glGetUniformLocation (prog, "iGlobalTime");
+  uindex = glGetUniformLocation (prog, "iTime");
   if (uindex >= 0)
     glUniform1f (uindex, ((float) ticks) / 1000.0);
 
