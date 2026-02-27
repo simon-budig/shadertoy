@@ -1,4 +1,14 @@
-GL_LIBS=-lglut -lGLEW -lGL
+OS := $(shell uname -s)
+ifeq ($(OS),Darwin)
+  GL_LIBS=-framework OpenGL -framework GLUT
+else
+  GL_LIBS=-lglut -lGL
+endif
+
+CFLAGS = -Wall -Wextra -g
 
 shadertoy: shadertoy.c
-	gcc -Wall -Wextra -g -o $@ $< `pkg-config --libs --cflags gdk-pixbuf-2.0` $(GL_LIBS) -lm
+	$(CC) $(CFLAGS) -o $@ $< `pkg-config --libs --cflags gdk-pixbuf-2.0 glew` $(GL_LIBS) -lm
+
+clean:
+	-rm -rf shadertoy shadertoy.dSYM

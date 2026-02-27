@@ -23,10 +23,18 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#ifdef __MACH__
+#include <mach/clock.h>
+#include <mach/mach.h>
+#endif
 
 #include <GL/glew.h>
+#ifdef __APPLE__
+#  include <GLUT/glut.h>
+#else
 #include <GL/glut.h>
 #include <GL/freeglut_ext.h>
+#endif
 
 #include <gdk-pixbuf/gdk-pixbuf.h>
 
@@ -119,12 +127,35 @@ keyboard_handler (unsigned char key, int x, int y)
       case '\x1b':  /* Escape */
       case 'q':
       case 'Q':
+#       ifdef __APPLE__
+        exit(0);
+#       else
         glutLeaveMainLoop ();
+#       endif
         break;
 
       case 'f': /* fullscreen */
       case 'F':
+#       ifdef __APPLE__
+        {
+          static int fullscreen = 0;
+          static int x0 = 0, y0 = 0, width = 800, height = 600;
+          if (fullscreen) {
+            glutReshapeWindow(width, height);
+            glutPositionWindow(x0, y0);
+            fullscreen = 0;
+          } else {
+            x0     = glutGet (GLUT_WINDOW_X);
+            y0     = glutGet (GLUT_WINDOW_Y);
+            width  = glutGet (GLUT_WINDOW_WIDTH);
+            height = glutGet (GLUT_WINDOW_HEIGHT);
+            glutFullScreen();
+            fullscreen = 1;
+          }
+        }
+#       else
         glutFullScreenToggle ();
+#       endif
         break;
 
       default:
@@ -166,7 +197,19 @@ display (void)
   y0     = glutGet (GLUT_WINDOW_Y);
   width  = glutGet (GLUT_WINDOW_WIDTH);
   height = glutGet (GLUT_WINDOW_HEIGHT);
+#ifdef __MACH__ // OS X does not have clock_gettime, use clock_get_time
+  clock_serv_t cclock;
+  mach_timespec_t mts;
+  // SYSTEM_CLOCK is monotonic, CALENDAR_CLOCK is not
+  host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &cclock);
+  clock_get_time(cclock, &mts);
+  mach_port_deallocate(mach_task_self(), cclock);
+  ts.tv_sec = mts.tv_sec;
+  ts.tv_nsec = mts.tv_nsec;
+
+#else
   clock_gettime (CLOCK_MONOTONIC_RAW, &ts);
+#endif
   ticks  = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 
   if (frames == 0)
